@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Internship Matchmaking Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    * { box-sizing: border-box; }
+    body { display: flex; margin: 0; font-family: Arial, sans-serif; background: #f4f6fb; color: #222; }
+    .sidebar {
+      width: 220px;
+      background: #162447;
+      color: #fff;
+      min-height: 100vh;
+      padding: 30px 10px 10px 10px;
+      display: flex; flex-direction: column;
+    }
+    .sidebar h2 { margin-top: 0; color: #fff; }
+    .sidebar nav a {
+      display: block; padding: 10px 15px; margin-bottom: 8px;
+      color: #fff; text-decoration: none; border-radius: 5px;
+      transition: background 0.2s; cursor: pointer;
+    }
+    .sidebar nav a.active,
+    .sidebar nav a:hover { background: #1f4068; }
+    .main-content {
+      flex: 1;
+      padding: 32px 5vw;
+      display: flex; flex-direction: column;
+    }
+    .metrics {
+      display: flex; gap: 24px; margin-bottom: 36px;
+    }
+    .metric-card {
+      flex: 1;
+      background: #fff;
+      border-radius: 12px;
+      padding: 32px 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      text-align: center;
+    }
+    .metric-title { font-size: 1.1rem; color: #555; margin-bottom: 10px; }
+    .metric-value { font-size: 2.1rem; font-weight: bold; color: #162447; }
+    .section {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 20px 24px 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .section-title { font-size: 1.2rem; color: #222; margin-bottom: 20px; }
+    .hidden { display: none; }
+    
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .form-group textarea {
+      height: 80px;
+      resize: vertical;
+    }
+    .btn {
+      background: #162447;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    .btn:hover {
+      background: #1f4068;
+    }
+    .btn-success {
+      background: #28a745;
+    }
+    .btn-success:hover {
+      background: #218838;
+    }
+    .btn-danger {
+      background: #dc3545;
+    }
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    
+    /* Table Styles */
+    table {
+      width: 100%; border-collapse: collapse; margin-top: 8px; background: #fafbfc;
+    }
+    th, td {
+      border-bottom: 1px solid #e8ebf1;
+      padding: 12px 10px;
+      text-align: left;
+      font-size: 1rem;
+    }
+    th { background: #f6f8fa; font-weight: bold; color: #222; }
+    
+    /* Match Score Styling */
+    .match-score {
+      padding: 4px 8px;
+      border-radius: 15px;
+      color: white;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+    .match-excellent { background: #28a745; }
+    .match-good { background: #ffc107; color: #000; }
+    .match-fair { background: #fd7e14; }
+    .match-poor { background: #dc3545; }
+    
+    /* Skills Display */
+    .skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .skill-tag {
+      background: #e9ecef;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      color: #495057;
+    }
+    
+    /* Search and Filter */
+    .search-filter {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .search-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    
+    @media (max-width: 950px) {
+      .metrics { flex-direction: column; gap: 14px; }
+      .sidebar { width: 150px; padding: 20px 4px 10px 4px; }
+      .main-content { padding: 16px 0.5vw; }
+      .search-filter { flex-direction: column; align-items: stretch; }
+    }
+    @media (max-width: 700px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; min-height: unset; }
+      .main-content { padding: 8px 4vw; }
+      .metrics { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <h2>AI Matchmaker</h2>
+    <nav>
+      <a href="#" class="nav-link active" data-section="overview">Overview</a>
+      <a href="#" class="nav-link" data-section="students">Students</a>
+      <a href="#" class="nav-link" data-section="internships">Internships</a>
+      <a href="#" class="nav-link" data-section="matchmaking">AI Matching</a>
+      <a href="#" class="nav-link" data-section="analytics">Analytics</a>
+    </nav>
+  </aside>
+  
+  <div class="main-content">
+    <!-- Overview Section -->
+    <div id="overview-section" class="content-section">
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-title">Total Students</div>
+          <div class="metric-value" id="total-students">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Total Internships</div>
+          <div class="metric-value" id="total-internships">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Total Interactions</div>
+          <div class="metric-value" id="total-interactions">0</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-title">Top Skill</div>
+          <div class="metric-value" id="top-skill">Loading...</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <div class="section-title">System Status</div>
+        <p>Welcome to the AI Internship Matchmaking System! Use the sidebar to navigate between different sections.</p>
+        <ul>
+          <li><strong>Students:</strong> Add and manage student profiles</li>
+          <li><strong>Internships:</strong> Add and manage internship opportunities</li>
+          <li><strong>AI Matching:</strong> Get AI-powered recommendations</li>
+          <li><strong>Analytics:</strong> View system insights and statistics</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Students Section -->
+    <div id="students-section" class="content-section hidden">
+      <section class="section">
+        <div class="section-title">Add New Student</div>
+        <form id="student-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+              <label>Student ID</label>
+              <input type="text" id="student-id" required>
+            </div>
+            <div class="form-group">
+              <label>Name</label>
+              <input type="text" id="student-name" required>
+            </div>
+            <div class="form-group">
+              <label>Skills (comma-separated)</label>
+              <input type="text" id="student-skills" placeholder="Python, Machine Learning, Data Analysis" required>
+            </div>
+            <div class="form-group">
+              <label>Academic Background</label>
+              <input type="text" id="student-academic" required>
+            </div>
+            <div class="form-group">
+              <label>GPA</label>
+              <input type="number" id="student-gpa" min="0" max="4" step="0.1" required>
+            </div>
+            <div class="form-group">
+              <label>Experience Level</label>
+              <select id="student-experience" required>
+                <option value="">Select Experience</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Preferred Locations (comma-separated)</label>
+              <input type="text" id="student-locations" placeholder="New York, San Francisco" required>
+            </div>
+            <div class="form-group">
+              <label>Preferred Industries (comma-separated)</label>
+              <input type="text" id="student-industries" placeholder="Technology, Finance" required>
+            </div>
+          </div>
+          <button type="submit" class="btn">Add Student</button>
+        </form>
+      </section>
+
+      <section class="section">
+        <div class="section-title">All Students</div>
+        <div class="search-filter">
+          <input type="text" class="search-input" id="student-search" placeholder="Search students...">
+          <button class="btn" onclick="loadStudents()">Refresh</button>
+        </div>
+        <div id="students-list">
+          <p>Students will be loaded here...</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Internships Section -->
+    <div id="internships-section" class="content-section hidden">
+      <section class="section">
+        <div class="section-title">Add New Internship</div>
+        <form id="internship-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+              <label>Internship ID</label>
+              <input type="text" id="internship-id" required>
+            </div>
+            <div class="form-group">
+              <label>Company Name</label>
+              <input type="text" id="company-name" required>
+            </div>
+            <div class="form-group">
+              <label>Role Title</label>
+              <input type="text" id="role-title" required>
+            </div>
+            <div class="form-group">
+              <label>Required Skills (comma-separated)</label>
+              <input type="text" id="required-skills" placeholder="Python, Machine Learning" required>
+            </div>
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" id="internship-location" required>
+            </div>
+            <div class="form-group">
+              <label>Industry</label>
+              <input type="text" id="internship-industry" required>
+            </div>
+            <div class="form-group">
+              <label>Duration (months)</label>
+              <input type="number" id="duration-months" min="1" max="12" required>
+            </div>
+            <div class="form-group">
+              <label>Minimum GPA</label>
+              <input type="number" id="min-gpa" min="0" max="4" step="0.1" required>
+            </div>
+            <div class="form-group">
+              <label>Experience Required</label>
+              <select id="experience-required" required>
+                <option value="">Select Experience</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>Description</label>
+              <textarea id="internship-description" required></textarea>
+            </div>
+          </div>
+          <button type="submit" class="btn">Add Internship</button>
+        </form>
+      </section>
+
+      <section class="section">
+        <div class="section-title">All Internships</div>
+        <div class="search-filter">
+          <input type="text" class="search-input" id="internship-search" placeholder="Search internships...">
+          <button class="btn" onclick="loadInternships()">Refresh</button>
+        </div>
+        <div id="internships-list">
+          <p>Internships will be loaded here...</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- AI Matchmaking Section -->
+    <div id="matchmaking-section" class="content-section hidden">
+      <section class="section">
+        <div class="section-title">AI-Powered Recommendations</div>
+        <div class="search-filter">
+          <select id="student-select" style="flex: 1;">
+            <option value="">Select a student to get recommendations...</option>
+          </select>
+          <input type="number" id="top-n" placeholder="Top N (default: 5)" min="1" max="20" value="5">
+          <button class="btn" onclick="getRecommendations()">Get Recommendations</button>
+        </div>
+        <div id="recommendations-result">
+          <p>Select a student to see AI recommendations.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">Record Interaction</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end;">
+          <div class="form-group">
+            <label>Student</label>
+            <select id="interaction-student">
+              <option value="">Select Student</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Internship</label>
+            <select id="interaction-internship">
+              <option value="">Select Internship</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Action</label>
+            <select id="interaction-action">
+              <option value="view">View</option>
+              <option value="apply">Apply</option>
+              <option value="bookmark">Bookmark</option>
+              <option value="reject">Reject</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Rating (1-5, optional)</label>
+            <input type="number" id="interaction-rating" min="1" max="5">
+          </div>
+          <button class="btn" onclick="recordInteraction()">Record</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Analytics Section -->
+    <div id="analytics-section" class="content-section hidden">
+      <section class="section">
+        <div class="section-title">System Analytics</div>
+        <div id="analytics-content">
+          <p>Analytics data will be loaded here...</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    let currentSection = 'overview';
+
+    // Navigation handling
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = link.dataset.section;
+        switchSection(section);
+      });
+    });
+
+    function switchSection(section) {
+      document.querySelectorAll('.content-section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(`${section}-section`).classList.remove('hidden');
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      document.querySelector(`[data-section="${section}"]`).classList.add('active');
+      
+      currentSection = section;
+      
+      if (section === 'overview') loadOverview();
+      else if (section === 'students') loadStudents();
+      else if (section === 'internships') loadInternships();
+      else if (section === 'matchmaking') loadMatchmakingData();
+      else if (section === 'analytics') loadAnalytics();
+    }
+
+    // API Functions
+    async function apiCall(url, method = 'GET', data = null) {
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (data) options.body = JSON.stringify(data);
+      
+      try {
+        const response = await fetch(url, options);
+        return await response.json();
+      } catch (error) {
+        console.error('API call failed:', error);
+        alert('API call failed: ' + error.message);
+        return null;
+      }
+    }
+
+    // Student form submission
+    document.getElementById('student-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const studentData = {
+        student_id: document.getElementById('student-id').value,
+        name: document.getElementById('student-name').value,
+        skills: document.getElementById('student-skills').value.split(',').map(s => s.trim()),
+        academic_background: document.getElementById('student-academic').value,
+        gpa: parseFloat(document.getElementById('student-gpa').value),
+        preferred_locations: document.getElementById('student-locations').value.split(',').map(s => s.trim()),
+        preferred_industries: document.getElementById('student-industries').value.split(',').map(s => s.trim()),
+        experience_level: document.getElementById('student-experience').value
+      };
+      
+      const result = await apiCall('/api/students', 'POST', studentData);
+      if (result) {
+        alert('Student added successfully!');
+        document.getElementById('student-form').reset();
+        if (currentSection === 'students') loadStudents();
+        loadOverview(); // Refresh overview metrics
+      }
+    });
+
+    // Internship form submission
+    document.getElementById('internship-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const internshipData = {
+        internship_id: document.getElementById('internship-id').value,
+        company_name: document.getElementById('company-name').value,
+        role_title: document.getElementById('role-title').value,
+        required_skills: document.getElementById('required-skills').value.split(',').map(s => s.trim()),
+        location: document.getElementById('internship-location').value,
+        industry: document.getElementById('internship-industry').value,
+        duration_months: parseInt(document.getElementById('duration-months').value),
+        min_gpa: parseFloat(document.getElementById('min-gpa').value),
+        experience_required: document.getElementById('experience-required').value,
+        description: document.getElementById('internship-description').value
+      };
+      
+      const result = await apiCall('/api/internships', 'POST', internshipData);
+      if (result) {
+        alert('Internship added successfully!');
+        document.getElementById('internship-form').reset();
+        if (currentSection === 'internships') loadInternships();
+        loadOverview(); // Refresh overview metrics
+      }
+    });
+
+    // Load functions
+    async function loadOverview() {
+      const analytics = await apiCall('/api/analytics');
+      if (analytics) {
+        document.getElementById('total-students').textContent = analytics.total_students || 0;
+        document.getElementById('total-internships').textContent = analytics.total_internships || 0;
+        document.getElementById('total-interactions').textContent = analytics.total_interactions || 0;
+        
+        const topSkill = analytics.top_skills_in_demand && analytics.top_skills_in_demand.length > 0 
+          ? analytics.top_skills_in_demand[0][0] 
+          : 'None';
+        document.getElementById('top-skill').textContent = topSkill;
+      }
+    }
+
+    async function loadStudents() {
+      const response = await apiCall('/api/students');
+      if (response && response.students) {
+        displayStudents(response.students);
+        updateStudentDropdowns(response.students);
+      }
+    }
+
+    async function loadInternships() {
+      const response = await apiCall('/api/internships');
+      if (response && response.internships) {
+        displayInternships(response.internships);
+        updateInternshipDropdowns(response.internships);
+      }
+    }
+
+    async function loadMatchmakingData() {
+      await loadStudents();
+      await loadInternships();
+    }
+
+    function displayStudents(students) {
+      const container = document.getElementById('students-list');
+      if (!students.length) {
+        container.innerHTML = '<p>No students found. Add some students to get started!</p>';
+        return;
+      }
+      
+      let html = '<table><thead><tr><th>ID</th><th>Name</th><th>Academic Background</th><th>GPA</th><th>Experience</th><th>Skills</th></tr></thead><tbody>';
+      
+      students.forEach(student => {
+        html += `
+          <tr>
+            <td>${student.student_id}</td>
+            <td>${student.name}</td>
+            <td>${student.academic_background}</td>
+            <td>${student.gpa}</td>
+            <td>${student.experience_level}</td>
+            <td>
+              <div class="skills-list">
+                ${student.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function displayInternships(internships) {
+      const container = document.getElementById('internships-list');
+      if (!internships.length) {
+        container.innerHTML = '<p>No internships found. Add some internships to get started!</p>';
+        return;
+      }
+      
+      let html = '<table><thead><tr><th>Company</th><th>Role</th><th>Location</th><th>Industry</th><th>Duration</th><th>Min GPA</th><th>Skills Required</th></tr></thead><tbody>';
+      
+      internships.forEach(internship => {
+        html += `
+          <tr>
+            <td>${internship.company_name}</td>
+            <td>${internship.role_title}</td>
+            <td>${internship.location}</td>
+            <td>${internship.industry}</td>
+            <td>${internship.duration_months} months</td>
+            <td>${internship.min_gpa}</td>
+            <td>
+              <div class="skills-list">
+                ${internship.required_skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function updateStudentDropdowns(students) {
+      const selects = ['student-select', 'interaction-student'];
+      selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Select Student</option>';
+        students.forEach(student => {
+          select.innerHTML += `<option value="${student.student_id}">${student.name} (${student.student_id})</option>`;
+        });
+      });
+    }
+
+    function updateInternshipDropdowns(internships) {
+      const select = document.getElementById('interaction-internship');
+      select.innerHTML = '<option value="">Select Internship</option>';
+      internships.forEach(internship => {
+        select.innerHTML += `<option value="${internship.internship_id}">${internship.role_title} at ${internship.company_name}</option>`;
+      });
+    }
+
+    async function getRecommendations() {
+      const studentId = document.getElementById('student-select').value;
+      const topN = document.getElementById('top-n').value || 5;
+      
+      if (!studentId) {
+        alert('Please select a student');
+        return;
+      }
+      
+      const recommendations = await apiCall(`/api/recommendations/${studentId}?top_n=${topN}`);
+      if (recommendations) {
+        displayRecommendations(recommendations.recommendations);
+      }
+    }
+
+    function displayRecommendations(recommendations) {
+      const container = document.getElementById('recommendations-result');
+      if (!recommendations.length) {
+        container.innerHTML = '<p>No recommendations found.</p>';
+        return;
+      }
+      
+      let html = '<table><thead><tr><th>Company</th><th>Role</th><th>Location</th><th>Match Score</th><th>Skills Required</th></tr></thead><tbody>';
+      
+      recommendations.forEach(rec => {
+        const scoreClass = getScoreClass(rec.match_score);
+        html += `
+          <tr>
+            <td>${rec.company_name}</td>
+            <td>${rec.role_title}</td>
+            <td>${rec.location}</td>
+            <td><span class="match-score ${scoreClass}">${(rec.match_score * 100).toFixed(1)}%</span></td>
+            <td>
+              <div class="skills-list">
+                ${rec.required_skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function getScoreClass(score) {
+      if (score >= 0.8) return 'match-excellent';
+      if (score >= 0.6) return 'match-good';
+      if (score >= 0.4) return 'match-fair';
+      return 'match-poor';
+    }
+
+    async function recordInteraction() {
+      const studentId = document.getElementById('interaction-student').value;
+      const internshipId = document.getElementById('interaction-internship').value;
+      const action = document.getElementById('interaction-action').value;
+      const rating = document.getElementById('interaction-rating').value;
+      
+      if (!studentId || !internshipId) {
+        alert('Please select both student and internship');
+        return;
+      }
+      
+      const interactionData = {
+        student_id: studentId,
+        internship_id: internshipId,
+        action: action,
+        rating: rating ? parseInt(rating) : null
+      };
+      
+      const result = await apiCall('/api/interact', 'POST', interactionData);
+      if (result) {
+        alert('Interaction recorded successfully!');
+        document.getElementById('interaction-rating').value = '';
+        loadOverview(); // Refresh metrics
+      }
+    }
+
+    async function loadAnalytics() {
+      const analytics = await apiCall('/api/analytics');
+      if (analytics) {
+        let html = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <div>
+              <h3>System Overview</h3>
+              <p><strong>Total Students:</strong> ${analytics.total_students}</p>
+              <p><strong>Total Internships:</strong> ${analytics.total_internships}</p>
+              <p><strong>Total Interactions:</strong> ${analytics.total_interactions}</p>
+            </div>
+            <div>
+              <h3>Top Skills in Demand</h3>
+              <ul>
+        `;
+        
+        if (analytics.top_skills_in_demand && analytics.top_skills_in_demand.length > 0) {
+          analytics.top_skills_in_demand.slice(0, 10).forEach(([skill, count]) => {
+            html += `<li>${skill}: ${count} internships</li>`;
+          });
+        } else {
+          html += '<li>No skills data available</li>';
+        }
+        
+        html += `
+              </ul>
+            </div>
+          </div>
+        `;
+        
+        document.getElementById('analytics-content').innerHTML = html;
+      }
+    }
+
+    // Initialize the dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOverview();
+    });
+  </script>
+</body>
+</html>
+
+
